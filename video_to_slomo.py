@@ -12,18 +12,8 @@ import dataloader
 import platform
 from tqdm import tqdm
 
-# For parsing commandline arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("--ffmpeg_dir", type=str, default="", help='path to ffmpeg.exe')
-parser.add_argument("--video", type=str, required=True, help='path of video to be converted')
-parser.add_argument("--checkpoint", type=str, required=True, help='path of checkpoint for pretrained model')
-parser.add_argument("--fps", type=float, default=30, help='specify fps of output video. Default: 30.')
-parser.add_argument("--sf", type=int, required=True, help='specify the slomo factor N. This will increase the frames by Nx. Example sf=2 ==> 2x frames')
-parser.add_argument("--batch_size", type=int, default=1, help='Specify batch size for faster conversion. This will depend on your cpu/gpu memory. Default: 1')
-parser.add_argument("--output", type=str, default="output.mkv", help='Specify output file name. Default: output.mp4')
-args = parser.parse_args()
 
-def check():
+def check(args):
     """
     Checks the validity of commandline arguments.
 
@@ -49,7 +39,7 @@ def check():
         error = "output needs to have mkv container"
     return error
 
-def extract_frames(video, outDir):
+def extract_frames(video, outDir, ffmpeg_dir):
     """
     Converts the `video` to images.
 
@@ -71,7 +61,7 @@ def extract_frames(video, outDir):
     IS_WINDOWS = 'Windows' == platform.system()
 
     if IS_WINDOWS:
-        ffmpeg_path = os.path.join(args.ffmpeg_dir, "ffmpeg")
+        ffmpeg_path = os.path.join(ffmpeg_dir, "ffmpeg")
     else:
         ffmpeg_path = "ffmpeg"
 
@@ -81,7 +71,7 @@ def extract_frames(video, outDir):
         error = "Error converting file:{}. Exiting.".format(video)
     return error
 
-def create_video(dir):
+def create_video(dir, args):
     IS_WINDOWS = 'Windows' == platform.system()
 
     if IS_WINDOWS:
@@ -97,9 +87,9 @@ def create_video(dir):
     return error
 
 
-def main():
+def main(args):
     # Check if arguments are okay
-    error = check()
+    error = check(args)
     if error:
         print(error)
         exit(1)
@@ -122,7 +112,7 @@ def main():
     outputPath     = os.path.join(extractionDir, "output")
     os.mkdir(extractionPath)
     os.mkdir(outputPath)
-    error = extract_frames(args.video, extractionPath)
+    error = extract_frames(args.video, extractionPath, args.ffmpeg_dir)
     if error:
         print(error)
         exit(1)
@@ -221,11 +211,23 @@ def main():
             frameCounter += args.sf * (args.batch_size - 1)
 
     # Generate video from interpolated frames
-    create_video(outputPath)
+    create_video(outputPath, args)
 
     # Remove temporary files
     rmtree(extractionDir)
 
     exit(0)
 
-main()
+
+if __name__ == "__main__":
+    # For parsing commandline arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ffmpeg_dir", type=str, default="", help='path to ffmpeg.exe')
+    parser.add_argument("--video", type=str, required=True, help='path of video to be converted')
+    parser.add_argument("--checkpoint", type=str, required=True, help='path of checkpoint for pretrained model')
+    parser.add_argument("--fps", type=float, default=30, help='specify fps of output video. Default: 30.')
+    parser.add_argument("--sf", type=int, required=True, help='specify the slomo factor N. This will increase the frames by Nx. Example sf=2 ==> 2x frames')
+    parser.add_argument("--batch_size", type=int, default=1, help='Specify batch size for faster conversion. This will depend on your cpu/gpu memory. Default: 1')
+    parser.add_argument("--output", type=str, default="output.mkv", help='Specify output file name. Default: output.mp4')
+    args = parser.parse_args()
+    main(args)
